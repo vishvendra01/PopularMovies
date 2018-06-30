@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">PopMovies</string>
+    <string name="error_message">Something went wrong. Please try again.</string>
+    <string name="retry">Retry</string>
+    <string name="filter">Filter</string>
+    <string name="fileter_dialog_title">Choose Filter</string>
+
+    <string-array name="filter_options">
+        <item>Popular</item>
+        <item>Top Rated</item>
+    </string-array>
+
+</resources>
