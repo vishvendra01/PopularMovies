@@ -6,12 +6,14 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
 
-/**
- * Author : Vishvendra
- * Version: 1.0
- * 7/2/2018
- */
 
+/**
+ * implementation of {@link RecyclerView} which automatically choose
+ * number number of columns based on screen width.
+ *
+ * Credits: Chiu-Ki Chan
+ * http://blog.sqisland.com/2014/12/recyclerview-autofit-grid.html
+ */
 public class AutoFitRecyclerView extends RecyclerView {
     private GridLayoutManager manager;
     private int columnWidth = -1;
