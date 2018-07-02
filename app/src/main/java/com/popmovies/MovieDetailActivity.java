@@ -2,6 +2,7 @@ package com.popmovies;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -47,6 +48,16 @@ public class MovieDetailActivity extends AppCompatActivity {
         String movieSynopsis = getIntent().getStringExtra(ARG_MOVIE_SYNOPSIS);
         String moviePosterUrl = getIntent().getStringExtra(ARG_MOVIE_POSTER_URL);
 
+
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            // set action bar title as movie title
+            //actionBar.setTitle(movieTitle);
+
+            // show back button on actionbar
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
+
         mMovieTitleTextView.setText(movieTitle);
         mReleaseDateTextView.setText(movieReleaseDate);
         mRatingTextView.setText(String.valueOf(movieRatings));
@@ -55,5 +66,11 @@ public class MovieDetailActivity extends AppCompatActivity {
         if (moviePosterUrl != null) {
             Picasso.get().load(moviePosterUrl).into(mPosterImageView);
         }
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        finish();
+        return true;
     }
 }
