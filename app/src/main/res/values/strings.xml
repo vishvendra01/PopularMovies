@@ -4,6 +4,10 @@
     <string name="retry">Retry</string>
     <string name="filter">Filter</string>
     <string name="fileter_dialog_title">Choose Filter</string>
+    <string name="reviews_label">Reviews:</string>
+    <string name="trailers_label">Trailers:</string>
+    <string name="action_favorite">Favorite</string>
+    <string name="favorites_activity_title">Favorites</string>
 
     <string-array name="filter_options">
         <item>Popular</item>

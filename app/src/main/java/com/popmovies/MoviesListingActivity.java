@@ -27,12 +27,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
-/**
- * Author : Vishvendra
- * Version: 1.0
- * 6/29/2018
- */
-
 public class MoviesListingActivity extends AppCompatActivity implements MovieAdapter.OnItemClickListener {
     private static final int GRID_SPAN_COUNT = 3;
     private static final String SORT_BY_POPULARITY = "popularity";
@@ -99,6 +93,10 @@ public class MoviesListingActivity extends AppCompatActivity implements MovieAda
         if (item.getItemId() == R.id.action_filter) {
             showFilterDialog();
             return true;
+        } else if (item.getItemId() == R.id.action_favorite) {
+            Intent i = new Intent(this, FavoriteMoviesListingActivity.class);
+            startActivity(i);
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -159,11 +157,7 @@ public class MoviesListingActivity extends AppCompatActivity implements MovieAda
     @Override
     public void onItemClick(MovieModel clickedMovie) {
         Intent i = new Intent(this, MovieDetailActivity.class);
-        i.putExtra(MovieDetailActivity.ARG_MOVIE_TITLE, clickedMovie.getMovieTitle());
-        i.putExtra(MovieDetailActivity.ARG_MOVIE_RELEASE_DATE, clickedMovie.getReleaseRate());
-        i.putExtra(MovieDetailActivity.ARG_MOVIE_RATING, clickedMovie.getUserRatings());
-        i.putExtra(MovieDetailActivity.ARG_MOVIE_SYNOPSIS, clickedMovie.getMovieSynopsis());
-        i.putExtra(MovieDetailActivity.ARG_MOVIE_POSTER_URL, clickedMovie.getMoviePosterUrl());
+        i.putExtra(MovieDetailActivity.ARG_MOVIE_DATA, clickedMovie);
 
         startActivity(i);
     }

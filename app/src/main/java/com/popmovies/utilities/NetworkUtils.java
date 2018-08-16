@@ -16,6 +16,7 @@
 package com.popmovies.utilities;
 
 import android.net.Uri;
+import android.support.annotation.Nullable;
 
 import com.popmovies.Config;
 
@@ -39,6 +40,9 @@ public class NetworkUtils {
     private final static String MOVIE_ENDPOINT = "movie";
     private final static String SORT_BY_TOP_RATED = "top_rated";
     private final static String SORT_BY_POPULAR = "popular";
+    private final static String REVIEW_ENDPOINT = "reviews";
+    private final static String VIDEOS_ENDPOINT = "videos";
+
 
     private final static String apiVersion = "3";
 
@@ -88,13 +92,65 @@ public class NetworkUtils {
         return url;
     }
 
+
+    /**
+     * Build url to fetch movies reviews for chosen movie
+     *
+     * @param movieId movie id of given movie as per tmdb api
+     * @return movies reviews url
+     */
+    public static URL buildMovieReviewsUrl(String movieId) {
+        Uri builtUri = Uri.parse(TMDB_BASE_URL).buildUpon()
+                .appendPath(apiVersion)
+                .appendPath(MOVIE_ENDPOINT)
+                .appendPath(movieId)
+                .appendPath(REVIEW_ENDPOINT)
+                .appendQueryParameter(PARAM_API_KEY, Config.TMDB_API_KEY)
+                .build();
+
+        URL url = null;
+        try {
+            url = new URL(builtUri.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        return url;
+    }
+
+    /**
+     * Build url to fetch movie trailers for chosen movie
+     *
+     * @param movieId movie id for movie as per tmdb api
+     * @return movie trailers url
+     */
+    public static URL buildMovieTrailersUrl(String movieId) {
+        Uri builtUri = Uri.parse(TMDB_BASE_URL).buildUpon()
+                .appendPath(apiVersion)
+                .appendPath(MOVIE_ENDPOINT)
+                .appendPath(movieId)
+                .appendPath(VIDEOS_ENDPOINT)
+                .appendQueryParameter(PARAM_API_KEY, Config.TMDB_API_KEY)
+                .build();
+
+        URL url = null;
+        try {
+            url = new URL(builtUri.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        return url;
+    }
+
     /**
      * This method returns the entire result from the HTTP response.
      *
      * @param url The URL to fetch the HTTP response from.
-     * @return The contents of the HTTP response.
+     * @return The contents of the HTTP response which might be null
      * @throws IOException Related to network and stream reading
      */
+    @Nullable
     public static String getResponseFromHttpUrl(URL url) throws IOException {
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
