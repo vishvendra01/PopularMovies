@@ -1,6 +1,7 @@
 package com.popmovies;
 
 import android.content.Intent;
+import android.databinding.DataBindingUtil;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
@@ -17,6 +18,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.popmovies.data.MovieDbHelper;
+import com.popmovies.databinding.ActivityFavoriteMoviesListingBinding;
 import com.popmovies.model.MovieModel;
 
 import java.util.List;
@@ -26,19 +28,18 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
         implements MovieAdapter.OnItemClickListener, LoaderManager.LoaderCallbacks<MovieModel[]> {
     private static final int FAVORITE_LOADER_ID = 2355;
 
-    private RecyclerView mMoviesRecyclerView;
-    private ProgressBar mProgressBar;
-    private TextView mErrorMessageTextView;
-    private Button mRetryButton;
-
     private MovieAdapter mMoviesAdapter;
 
     private MovieDbHelper mDbHelper;
 
+    private ActivityFavoriteMoviesListingBinding mBinding;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_movies_listing);
+
+        mBinding = DataBindingUtil.setContentView(this, R.layout.activity_movies_listing);
+
         init();
 
         if (getSupportActionBar() != null) {
@@ -54,24 +55,16 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
     }
 
     private void init() {
-        mMoviesRecyclerView = (RecyclerView) findViewById(R.id.rv_movies);
-        mMoviesRecyclerView.setHasFixedSize(true);
-/*        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, GRID_SPAN_COUNT);
-        mMoviesRecyclerView.setLayoutManager(gridLayoutManager);*/
+        mBinding.rvMovies.setHasFixedSize(true);
 
         mMoviesAdapter = new MovieAdapter(this);
-        mMoviesRecyclerView.setAdapter(mMoviesAdapter);
+        mBinding.rvMovies.setAdapter(mMoviesAdapter);
 
-        mProgressBar = (ProgressBar) findViewById(R.id.pb_loading);
-        mErrorMessageTextView = (TextView) findViewById(R.id.tv_error_message);
-        mRetryButton = (Button) findViewById(R.id.btn_retry);
+        // hide empty list message text view initially
+        mBinding.tvEmptyMessage.setVisibility(View.GONE);
 
-        mRetryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-            }
-        });
+        // hide progress view too
+        mBinding.pbLoading.setVisibility(View.GONE);
     }
 
     @Override
@@ -87,25 +80,6 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
         return true;
     }
 
-
-    private void showErrorView() {
-        mRetryButton.setVisibility(View.VISIBLE);
-        mErrorMessageTextView.setVisibility(View.VISIBLE);
-    }
-
-    private void hideErrorView() {
-        mRetryButton.setVisibility(View.INVISIBLE);
-        mErrorMessageTextView.setVisibility(View.INVISIBLE);
-    }
-
-    private void showProgressView() {
-        mProgressBar.setVisibility(View.VISIBLE);
-    }
-
-    private void hideProgressView() {
-        mProgressBar.setVisibility(View.INVISIBLE);
-    }
-
     @Override
     public void onItemClick(MovieModel clickedMovie) {
         Intent i = new Intent(this, MovieDetailActivity.class);
@@ -117,18 +91,38 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
     @Override
     public Loader<MovieModel[]> onCreateLoader(int id, Bundle args) {
         return new AsyncTaskLoader<MovieModel[]>(this) {
+            MovieModel[] cachedMovies = null;
+
+            @Override
+            protected void onStartLoading() {
+                if (cachedMovies != null) {
+                    deliverResult(cachedMovies);
+                } else {
+                    mBinding.pbLoading.setVisibility(View.VISIBLE);
+                }
+            }
+
             @Override
             public MovieModel[] loadInBackground() {
                 final List<MovieModel> moviesList = mDbHelper.getFavoriteMoviesFromDb();
                 return moviesList.toArray(new MovieModel[moviesList.size()]);
+            }
+
+            @Override
+            public void deliverResult(MovieModel[] data) {
+                cachedMovies = data;
+                super.deliverResult(data);
             }
         };
     }
 
     @Override
     public void onLoadFinished(Loader<MovieModel[]> loader, MovieModel[] data) {
-        if (data != null) {
+        mBinding.pbLoading.setVisibility(View.GONE);
+        if (data != null && data.length > 0) {
             mMoviesAdapter.setMovies(data);
+        } else {
+            mBinding.tvEmptyMessage.setVisibility(View.VISIBLE);
         }
     }
 
