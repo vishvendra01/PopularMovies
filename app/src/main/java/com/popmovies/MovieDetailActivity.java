@@ -1,6 +1,7 @@
 package com.popmovies;
 
 import android.databinding.DataBindingUtil;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
@@ -10,7 +11,9 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.view.View;
+import android.widget.Toast;
 
+import com.popmovies.data.MovieDbHelper;
 import com.popmovies.databinding.ActivityMovieDetailBinding;
 import com.popmovies.model.MovieModel;
 import com.popmovies.model.ReviewModel;
@@ -35,6 +38,7 @@ public class MovieDetailActivity extends AppCompatActivity {
 
     private static final String ARG_REVIEWS = "reviews";
     private static final String ARG_TRAILERS = "trailers";
+    private static final String ARG_FAVORITE_MOVIE = "favorite_movie";
 
     private static final int REVIEW_LOADER_ID = 2355;
     private static final int TRAILER_LOADER_ID = 2545;
@@ -48,6 +52,10 @@ public class MovieDetailActivity extends AppCompatActivity {
     private MovieReviewsAdapter mReviewsAdapter;
     private MovieTrailersAdapter mTrailersAdapter;
 
+    private MovieDbHelper mDbHelper;
+
+    private Boolean mIsFavoriteMovie = null;
+
     private ActivityMovieDetailBinding mBinding;
 
     @Override
@@ -56,18 +64,25 @@ public class MovieDetailActivity extends AppCompatActivity {
 
         mBinding = DataBindingUtil.setContentView(this, R.layout.activity_movie_detail);
 
+        mDbHelper = new MovieDbHelper(this);
+
         if (!getIntent().hasExtra(ARG_MOVIE_DATA)) {
             return;
         }
 
-        MovieModel movie = getIntent().getParcelableExtra(ARG_MOVIE_DATA);
+        final MovieModel movie = getIntent().getParcelableExtra(ARG_MOVIE_DATA);
 
         setData(movie);
 
         mBinding.ivFavoriteToggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (mIsFavoriteMovie == null) {
+                    return;
+                }
 
+                setFavoriteMovieImage(!mIsFavoriteMovie);
+                new ToggleFavoriteStatusTask(movie).execute(mIsFavoriteMovie);
             }
         });
 
@@ -83,6 +98,13 @@ public class MovieDetailActivity extends AppCompatActivity {
         } else {
             String movieId = String.valueOf(movie.getId());
             initLoaders(movieId);
+        }
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(ARG_FAVORITE_MOVIE)) {
+            mIsFavoriteMovie = savedInstanceState.getBoolean(ARG_FAVORITE_MOVIE);
+            setFavoriteMovieImage(mIsFavoriteMovie);
+        } else {
+            new CheckFavoriteTask().execute(movie.getId());
         }
     }
 
@@ -120,6 +142,16 @@ public class MovieDetailActivity extends AppCompatActivity {
 
         mBinding.rvTrailers.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         mBinding.rvTrailers.setAdapter(mTrailersAdapter);
+    }
+
+    private void setFavoriteMovieImage(boolean isFavorite) {
+        if (isFavorite) {
+            mBinding.ivFavoriteToggle.setImageResource(R.drawable.ic_favorite_blue_filled_24dp);
+        } else {
+            mBinding.ivFavoriteToggle.setImageResource(R.drawable.ic_favorite_blue_empty_24px);
+        }
+
+        mIsFavoriteMovie = isFavorite;
     }
 
     private void initLoaders(final String movieId) {
@@ -215,6 +247,70 @@ public class MovieDetailActivity extends AppCompatActivity {
 
         if (mTrailers != null) {
             outState.putParcelableArray(ARG_TRAILERS, mTrailers);
+        }
+
+        if (mIsFavoriteMovie != null) {
+            outState.putBoolean(ARG_FAVORITE_MOVIE, mIsFavoriteMovie);
+        }
+    }
+
+    private class CheckFavoriteTask extends AsyncTask<Integer, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(Integer... params) {
+            if (params.length == 1) {
+                Integer movieId = params[0];
+                return mDbHelper.isFavoriteMovie(movieId);
+            }
+
+            return false;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            setFavoriteMovieImage(result);
+        }
+    }
+
+    private class ToggleFavoriteStatusTask extends AsyncTask<Boolean, Void, Boolean> {
+        private MovieModel mMovie;
+
+        public ToggleFavoriteStatusTask(MovieModel movie) {
+            this.mMovie = movie;
+        }
+
+        @Override
+        protected Boolean doInBackground(Boolean... params) {
+            if (params.length == 1) {
+                Boolean favStatusToSet = params[0];
+                if (favStatusToSet == null) {
+                    return null;
+                }
+
+                if (favStatusToSet) {
+                    mDbHelper.addFavoriteMovieToDb(mMovie);
+                    return true;
+                } else {
+                    mDbHelper.removeFavoriteMovieFromDb(mMovie.getId());
+                    return false;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean favStatus) {
+            if (favStatus == null) {
+                return;
+            }
+
+            String message = getString(R.string.movie_add_favorite_message);
+
+            if (!favStatus) {
+                message = getString(R.string.movie_remove_favorite_message);
+            }
+
+            Toast.makeText(MovieDetailActivity.this, message, Toast.LENGTH_SHORT).show();
         }
     }
 }
