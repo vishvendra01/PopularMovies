@@ -52,8 +52,6 @@ public class MoviesListingActivity extends AppCompatActivity implements MovieAda
     private void init() {
         mMoviesRecyclerView = (RecyclerView) findViewById(R.id.rv_movies);
         mMoviesRecyclerView.setHasFixedSize(true);
-/*        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, GRID_SPAN_COUNT);
-        mMoviesRecyclerView.setLayoutManager(gridLayoutManager);*/
 
         mMoviesAdapter = new MovieAdapter(this);
         mMoviesRecyclerView.setAdapter(mMoviesAdapter);
