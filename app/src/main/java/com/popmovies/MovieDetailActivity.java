@@ -1,5 +1,8 @@
 package com.popmovies;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -7,8 +10,10 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.view.View;
 import android.widget.Toast;
@@ -39,6 +44,8 @@ public class MovieDetailActivity extends AppCompatActivity {
     private static final String ARG_REVIEWS = "reviews";
     private static final String ARG_TRAILERS = "trailers";
     private static final String ARG_FAVORITE_MOVIE = "favorite_movie";
+
+    public static final String ACTION_FAVORITE_STATUS_CHANGED = "favorite-changed";
 
     private static final int REVIEW_LOADER_ID = 2355;
     private static final int TRAILER_LOADER_ID = 2545;
@@ -80,6 +87,11 @@ public class MovieDetailActivity extends AppCompatActivity {
                 if (mIsFavoriteMovie == null) {
                     return;
                 }
+
+                // fire a broadcast which tell it's subscribers about this event
+                Intent i = new Intent(ACTION_FAVORITE_STATUS_CHANGED);
+                LocalBroadcastManager.getInstance(MovieDetailActivity.this).sendBroadcast(i);
+
 
                 setFavoriteMovieImage(!mIsFavoriteMovie);
                 new ToggleFavoriteStatusTask(movie).execute(mIsFavoriteMovie);
@@ -138,9 +150,13 @@ public class MovieDetailActivity extends AppCompatActivity {
         mReviewsAdapter = new MovieReviewsAdapter();
 
         mBinding.rvReviews.setLayoutManager(new LinearLayoutManager(this));
+        DividerItemDecoration reviewsListDivider = new DividerItemDecoration(this, DividerItemDecoration.VERTICAL);
+        reviewsListDivider.setDrawable(getResources().getDrawable(R.drawable.reviews_list_divider));
+        mBinding.rvReviews.addItemDecoration(reviewsListDivider);
         mBinding.rvReviews.setAdapter(mReviewsAdapter);
 
         mBinding.rvTrailers.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        mBinding.rvTrailers.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.HORIZONTAL));
         mBinding.rvTrailers.setAdapter(mTrailersAdapter);
     }
 
@@ -156,9 +172,26 @@ public class MovieDetailActivity extends AppCompatActivity {
 
     private void initLoaders(final String movieId) {
         mReviewsLoaderCallbacks = new LoaderManager.LoaderCallbacks<ReviewModel[]>() {
+            @SuppressLint("StaticFieldLeak")
             @Override
             public Loader<ReviewModel[]> onCreateLoader(int id, Bundle args) {
                 return new AsyncTaskLoader<ReviewModel[]>(MovieDetailActivity.this) {
+                    ReviewModel[] cachedReviews;
+
+                    @Override
+                    protected void onStartLoading() {
+                        if (cachedReviews != null) {
+                            deliverResult(cachedReviews);
+                        } else {
+                            forceLoad();
+                        }
+                    }
+
+                    @Override
+                    public void deliverResult(ReviewModel[] data) {
+                        cachedReviews = data;
+                        super.deliverResult(data);
+                    }
 
                     @Override
                     public ReviewModel[] loadInBackground() {
@@ -189,9 +222,27 @@ public class MovieDetailActivity extends AppCompatActivity {
         };
 
         mTrailerLoaderCallbacks = new LoaderManager.LoaderCallbacks<TrailerModel[]>() {
+            @SuppressLint("StaticFieldLeak")
             @Override
             public Loader<TrailerModel[]> onCreateLoader(int id, Bundle args) {
                 return new AsyncTaskLoader<TrailerModel[]>(MovieDetailActivity.this) {
+                    TrailerModel[] cachedTrailers;
+
+                    @Override
+                    protected void onStartLoading() {
+                        if (cachedTrailers != null) {
+                            deliverResult(cachedTrailers);
+                        } else {
+                            forceLoad();
+                        }
+                    }
+
+                    @Override
+                    public void deliverResult(TrailerModel[] data) {
+                        cachedTrailers = data;
+                        super.deliverResult(data);
+                    }
+
                     @Override
                     public TrailerModel[] loadInBackground() {
                         TrailerModel[] trailers = null;
