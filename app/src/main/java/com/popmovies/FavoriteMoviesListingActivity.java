@@ -1,12 +1,18 @@
 package com.popmovies;
 
+import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
@@ -32,13 +38,15 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
 
     private MovieDbHelper mDbHelper;
 
+    private BroadcastReceiver mFavStatusChangeReceiver;
+
     private ActivityFavoriteMoviesListingBinding mBinding;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mBinding = DataBindingUtil.setContentView(this, R.layout.activity_movies_listing);
+        mBinding = DataBindingUtil.setContentView(this, R.layout.activity_favorite_movies_listing);
 
         init();
 
@@ -52,6 +60,9 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
         mDbHelper = new MovieDbHelper(this);
 
         getSupportLoaderManager().initLoader(FAVORITE_LOADER_ID, null, this);
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(mFavStatusChangeReceiver,
+                new IntentFilter(MovieDetailActivity.ACTION_FAVORITE_STATUS_CHANGED));
     }
 
     private void init() {
@@ -65,19 +76,20 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
 
         // hide progress view too
         mBinding.pbLoading.setVisibility(View.GONE);
+
+        mFavStatusChangeReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                getSupportLoaderManager().restartLoader(FAVORITE_LOADER_ID, null, FavoriteMoviesListingActivity.this);
+            }
+        };
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-    }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater menuInflater = getMenuInflater();
-        menuInflater.inflate(R.menu.main, menu);
-
-        return true;
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mFavStatusChangeReceiver);
     }
 
     @Override
@@ -88,6 +100,15 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
         startActivity(i);
     }
 
+    private void setMoviesList(MovieModel[] movies) {
+        if (movies != null && movies.length > 0) {
+            mMoviesAdapter.setMovies(movies);
+        } else {
+            mBinding.tvEmptyMessage.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @SuppressLint("StaticFieldLeak")
     @Override
     public Loader<MovieModel[]> onCreateLoader(int id, Bundle args) {
         return new AsyncTaskLoader<MovieModel[]>(this) {
@@ -99,6 +120,7 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
                     deliverResult(cachedMovies);
                 } else {
                     mBinding.pbLoading.setVisibility(View.VISIBLE);
+                    forceLoad();
                 }
             }
 
@@ -119,15 +141,18 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
     @Override
     public void onLoadFinished(Loader<MovieModel[]> loader, MovieModel[] data) {
         mBinding.pbLoading.setVisibility(View.GONE);
-        if (data != null && data.length > 0) {
-            mMoviesAdapter.setMovies(data);
-        } else {
-            mBinding.tvEmptyMessage.setVisibility(View.VISIBLE);
-        }
+
+        setMoviesList(data);
     }
 
     @Override
     public void onLoaderReset(Loader<MovieModel[]> loader) {
 
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        finish();
+        return true;
     }
 }
