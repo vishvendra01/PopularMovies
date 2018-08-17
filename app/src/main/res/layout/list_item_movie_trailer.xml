@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:background="@color/colorAccent"
     android:orientation="vertical">
 
     <TextView
@@ -11,7 +12,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp"
         android:textAppearance="@style/Base.TextAppearance.AppCompat.Large"
-        android:textColor="@color/black"
+        android:textColor="@color/white"
         tools:text="Trailer 1" />
 
 </LinearLayout>
