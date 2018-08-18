@@ -1,13 +1,14 @@
 package com.popmovies;
 
-import android.content.DialogInterface;
+import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.annotation.Nullable;
-import android.support.v7.app.AlertDialog;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -17,6 +18,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.popmovies.dialogs.FilterDialog;
 import com.popmovies.model.MovieModel;
 import com.popmovies.utilities.NetworkUtils;
 import com.popmovies.utilities.TmdbJsonUtils;
@@ -25,28 +27,63 @@ import org.json.JSONException;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.List;
 
-public class MoviesListingActivity extends AppCompatActivity implements MovieAdapter.OnItemClickListener {
-    private static final int GRID_SPAN_COUNT = 3;
+public class MoviesListingActivity extends AppCompatActivity
+        implements MovieAdapter.OnItemClickListener, LoaderManager.LoaderCallbacks<MovieModel[]>, FilterDialog.OptionSelectListener {
+    private static final String SORT_TYPE_KEY = "sort-type";
+    private static final String MOVIE_DATA_KEY = "movie-data";
+
     private static final String SORT_BY_POPULARITY = "popularity";
     private static final String SORT_BY_TOP_RATED = "top_rated";
+
+    private static final String ARG_MOVIE_LISTING_URL = "movie_listing_url";
+    private static final int LOADER_ID = 2354;
 
     private RecyclerView mMoviesRecyclerView;
     private ProgressBar mProgressBar;
     private TextView mErrorMessageTextView;
     private Button mRetryButton;
 
+    private MovieModel[] mMoviesListing;
+
     private MovieAdapter mMoviesAdapter;
-    private String sortBy = SORT_BY_POPULARITY;
-    private MoviesLoadTask mMovieLoadTask;
+    private String mSortBy = SORT_BY_POPULARITY;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_movies_listing);
         init();
-        getMoviesListFromTmdb();
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(SORT_TYPE_KEY)) {
+            mSortBy = savedInstanceState.getString(SORT_TYPE_KEY);
+        }
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(MOVIE_DATA_KEY)) {
+            Parcelable[] parcelablesArray = savedInstanceState.getParcelableArray(MOVIE_DATA_KEY);
+            mMoviesListing = new MovieModel[parcelablesArray.length];
+            System.arraycopy(parcelablesArray, 0, mMoviesListing, 0, parcelablesArray.length);
+
+            mMoviesAdapter.setMovies(mMoviesListing);
+        } else {
+            URL moviesUrl = null;
+
+            if (mSortBy.equals(SORT_BY_POPULARITY)) {
+                moviesUrl = NetworkUtils.buildPopularMoviesUrl();
+            } else if (mSortBy.equals(SORT_BY_TOP_RATED)) {
+                moviesUrl = NetworkUtils.buildTopRatedMoviesUrl();
+            }
+
+            if (moviesUrl == null) {
+                return;
+            }
+
+            Bundle args = new Bundle();
+            args.putSerializable(ARG_MOVIE_LISTING_URL, moviesUrl);
+
+            getSupportLoaderManager().initLoader(LOADER_ID, args, this);
+        }
+
     }
 
     private void init() {
@@ -66,16 +103,6 @@ public class MoviesListingActivity extends AppCompatActivity implements MovieAda
                 getMoviesListFromTmdb();
             }
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        // cancel our asynctask if it is running to avoid crashes
-        if (mMovieLoadTask != null) {
-            mMovieLoadTask.cancel(true);
-        }
     }
 
     @Override
@@ -100,37 +127,36 @@ public class MoviesListingActivity extends AppCompatActivity implements MovieAda
         return super.onOptionsItemSelected(item);
     }
 
-    private void showFilterDialog() {
-        final int POPULAR_INDEX = 0;
-        final int TOP_RATED_INDEX = 1;
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (mMoviesListing != null) {
+            outState.putParcelableArray(MOVIE_DATA_KEY, mMoviesListing);
+        }
 
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.fileter_dialog_title)
-                .setItems(R.array.filter_options, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (which == POPULAR_INDEX) {
-                            sortBy = SORT_BY_POPULARITY;
-                        } else if (which == TOP_RATED_INDEX) {
-                            sortBy = SORT_BY_TOP_RATED;
-                        }
-                        getMoviesListFromTmdb();
-                    }
-                }).show();
+        outState.putString(SORT_TYPE_KEY, mSortBy);
+    }
+
+    private void showFilterDialog() {
+        new FilterDialog().show(getSupportFragmentManager(), FilterDialog.class.getSimpleName());
     }
 
     private void getMoviesListFromTmdb() {
-        if (mMovieLoadTask != null) {
-            mMovieLoadTask.cancel(true);
-        }
-        mMovieLoadTask = new MoviesLoadTask();
-
-        if (sortBy.equals(SORT_BY_POPULARITY)) {
+        if (mSortBy.equals(SORT_BY_POPULARITY)) {
             URL popularMoviesUrl = NetworkUtils.buildPopularMoviesUrl();
-            mMovieLoadTask.execute(popularMoviesUrl);
-        } else if (sortBy.equals(SORT_BY_TOP_RATED)) {
+
+            Bundle args = new Bundle();
+            args.putSerializable(ARG_MOVIE_LISTING_URL, popularMoviesUrl);
+
+            getSupportLoaderManager().restartLoader(LOADER_ID, args, this);
+
+        } else if (mSortBy.equals(SORT_BY_TOP_RATED)) {
             URL topRatedMoviesUrl = NetworkUtils.buildTopRatedMoviesUrl();
-            mMovieLoadTask.execute(topRatedMoviesUrl);
+
+            Bundle args = new Bundle();
+            args.putSerializable(ARG_MOVIE_LISTING_URL, topRatedMoviesUrl);
+
+            getSupportLoaderManager().restartLoader(LOADER_ID, args, this);
         }
     }
 
@@ -160,46 +186,81 @@ public class MoviesListingActivity extends AppCompatActivity implements MovieAda
         startActivity(i);
     }
 
+    @SuppressLint("StaticFieldLeak")
+    @Override
+    public Loader<MovieModel[]> onCreateLoader(int id, final Bundle args) {
+        return new AsyncTaskLoader<MovieModel[]>(this) {
+            MovieModel[] cachedMovies;
 
-    private class MoviesLoadTask extends AsyncTask<URL, Void, MovieModel[]> {
+            @Override
+            protected void onStartLoading() {
+                mMoviesAdapter.setMovies(null); // reset movies adapter
 
-        @Override
-        protected void onPreExecute() {
-            mMoviesAdapter.setMovies(null); // reset movies adapter
+                hideErrorView();
+                showProgressView();
 
-            hideErrorView();
-            showProgressView();
-        }
+                if (cachedMovies != null) {
+                    deliverResult(cachedMovies);
+                } else {
+                    forceLoad();
+                }
+            }
 
-        @Override
-        protected MovieModel[] doInBackground(URL... params) {
-            // just in case if i forget to put url
-            if (params.length == 0) {
+            @Override
+            public void deliverResult(MovieModel[] data) {
+                cachedMovies = data;
+                super.deliverResult(data);
+            }
+
+            @Override
+            public MovieModel[] loadInBackground() {
+                if (args == null) {
+                    return null;
+                }
+
+                if (args.containsKey(ARG_MOVIE_LISTING_URL)) {
+                    URL movieUrl = (URL) args.getSerializable(ARG_MOVIE_LISTING_URL);
+                    try {
+                        String moviesResponseJsonStr = NetworkUtils.getResponseFromHttpUrl(movieUrl);
+                        MovieModel[] parsedMoviesModelsArray = TmdbJsonUtils.getMoviesListFromJson(moviesResponseJsonStr);
+                        return parsedMoviesModelsArray;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 return null;
             }
+        };
+    }
 
-            try {
-                String moviesResponseJsonStr = NetworkUtils.getResponseFromHttpUrl(params[0]);
-                MovieModel[] parsedMoviesModelsArray = TmdbJsonUtils.getMoviesListFromJson(moviesResponseJsonStr);
-                return parsedMoviesModelsArray;
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+    @Override
+    public void onLoadFinished(Loader<MovieModel[]> loader, MovieModel[] data) {
+        hideProgressView();
 
-            return null;
+        mMoviesListing = data;
+        if (data == null) {
+            showErrorView();
+        } else {
+            mMoviesAdapter.setMovies(data);
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<MovieModel[]> loader) {
+
+    }
+
+    @Override
+    public void onOptionSelected(int index) {
+        if (index == FilterDialog.POPULAR_INDEX) {
+            mSortBy = SORT_BY_POPULARITY;
+        } else if (index == FilterDialog.TOP_RATED_INDEX) {
+            mSortBy = SORT_BY_TOP_RATED;
         }
 
-        @Override
-        protected void onPostExecute(MovieModel[] moviesArray) {
-            hideProgressView();
-
-            if (moviesArray == null) {
-                showErrorView();
-            } else {
-                mMoviesAdapter.setMovies(moviesArray);
-            }
-        }
+        getMoviesListFromTmdb();
     }
 }
