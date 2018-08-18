@@ -194,14 +194,13 @@ public class MoviesListingActivity extends AppCompatActivity
 
             @Override
             protected void onStartLoading() {
-                mMoviesAdapter.setMovies(null); // reset movies adapter
-
-                hideErrorView();
-                showProgressView();
-
                 if (cachedMovies != null) {
                     deliverResult(cachedMovies);
                 } else {
+                    mMoviesAdapter.setMovies(null); // reset movies adapter
+
+                    hideErrorView();
+                    showProgressView();
                     forceLoad();
                 }
             }
