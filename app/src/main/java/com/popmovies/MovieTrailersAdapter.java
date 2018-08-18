@@ -12,6 +12,11 @@ import com.popmovies.model.TrailerModel;
 
 public class MovieTrailersAdapter extends RecyclerView.Adapter<MovieTrailersAdapter.MovieTrailerHolder> {
     private TrailerModel[] mTrailers;
+    private ClickListener mClickListener;
+
+    public MovieTrailersAdapter(ClickListener clickListener) {
+        this.mClickListener = clickListener;
+    }
 
     public void setTrailers(TrailerModel[] trailers) {
         this.mTrailers = trailers;
@@ -28,10 +33,19 @@ public class MovieTrailersAdapter extends RecyclerView.Adapter<MovieTrailersAdap
     }
 
     @Override
-    public void onBindViewHolder(@NonNull MovieTrailerHolder holder, int position) {
+    public void onBindViewHolder(@NonNull final MovieTrailerHolder holder, int position) {
         final TrailerModel trailer = mTrailers[position];
 
         holder.videoTitle.setText(trailer.getName());
+
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mClickListener != null) {
+                    mClickListener.onTrailerClick(mTrailers[holder.getAdapterPosition()]);
+                }
+            }
+        });
     }
 
     @Override
@@ -50,5 +64,9 @@ public class MovieTrailersAdapter extends RecyclerView.Adapter<MovieTrailersAdap
             super(itemView);
             videoTitle = (TextView) itemView.findViewById(R.id.tv_video_title);
         }
+    }
+
+    public interface ClickListener {
+        void onTrailerClick(TrailerModel trailer);
     }
 }
