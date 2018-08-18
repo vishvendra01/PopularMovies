@@ -1,11 +1,14 @@
 package com.popmovies;
 
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
@@ -38,7 +41,7 @@ import java.net.URL;
  * 6/29/2018
  */
 
-public class MovieDetailActivity extends AppCompatActivity {
+public class MovieDetailActivity extends AppCompatActivity implements MovieTrailersAdapter.ClickListener {
     public static final String ARG_MOVIE_DATA = "movie";
 
     private static final String ARG_REVIEWS = "reviews";
@@ -102,8 +105,13 @@ public class MovieDetailActivity extends AppCompatActivity {
         // otherwise load it from internet using loaders
         if (savedInstanceState != null && savedInstanceState.containsKey(ARG_REVIEWS)
                 && savedInstanceState.containsKey(ARG_TRAILERS)) {
-            mReviews = (ReviewModel[]) savedInstanceState.getParcelableArray(ARG_REVIEWS);
-            mTrailers = (TrailerModel[]) savedInstanceState.getParcelableArray(ARG_TRAILERS);
+            Parcelable[] parcelableReviewArray = savedInstanceState.getParcelableArray(ARG_REVIEWS);
+            mReviews = new ReviewModel[parcelableReviewArray.length];
+            System.arraycopy(parcelableReviewArray, 0, mReviews, 0, parcelableReviewArray.length);
+
+            Parcelable[] parcelableTrailerArray = savedInstanceState.getParcelableArray(ARG_TRAILERS);
+            mTrailers = new TrailerModel[parcelableTrailerArray.length];
+            System.arraycopy(parcelableTrailerArray, 0, mTrailers, 0, parcelableTrailerArray.length);
 
             mReviewsAdapter.setReviews(mReviews);
             mTrailersAdapter.setTrailers(mTrailers);
@@ -112,6 +120,7 @@ public class MovieDetailActivity extends AppCompatActivity {
             initLoaders(movieId);
         }
 
+        // check if our movie is favorite movie
         if (savedInstanceState != null && savedInstanceState.containsKey(ARG_FAVORITE_MOVIE)) {
             mIsFavoriteMovie = savedInstanceState.getBoolean(ARG_FAVORITE_MOVIE);
             setFavoriteMovieImage(mIsFavoriteMovie);
@@ -146,7 +155,7 @@ public class MovieDetailActivity extends AppCompatActivity {
             Picasso.get().load(moviePosterUrl).into(mBinding.ivMoviePoster);
         }
 
-        mTrailersAdapter = new MovieTrailersAdapter();
+        mTrailersAdapter = new MovieTrailersAdapter(this);
         mReviewsAdapter = new MovieReviewsAdapter();
 
         mBinding.rvReviews.setLayoutManager(new LinearLayoutManager(this));
@@ -212,6 +221,7 @@ public class MovieDetailActivity extends AppCompatActivity {
 
             @Override
             public void onLoadFinished(Loader<ReviewModel[]> loader, ReviewModel[] data) {
+                mReviews = data;
                 setReviews(data);
             }
 
@@ -262,6 +272,7 @@ public class MovieDetailActivity extends AppCompatActivity {
 
             @Override
             public void onLoadFinished(Loader<TrailerModel[]> loader, TrailerModel[] data) {
+                mTrailers = data;
                 setTrailers(data);
             }
 
@@ -281,6 +292,17 @@ public class MovieDetailActivity extends AppCompatActivity {
 
     private void setTrailers(TrailerModel[] trailers) {
         mTrailersAdapter.setTrailers(trailers);
+    }
+
+    private void playYoutubeVideo(Context context, String id) {
+        Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + id));
+        Intent webIntent = new Intent(Intent.ACTION_VIEW,
+                Uri.parse("http://www.youtube.com/watch?v=" + id));
+        try {
+            context.startActivity(appIntent);
+        } catch (ActivityNotFoundException ex) {
+            context.startActivity(webIntent);
+        }
     }
 
     @Override
@@ -305,6 +327,14 @@ public class MovieDetailActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onTrailerClick(TrailerModel trailer) {
+        playYoutubeVideo(this, trailer.getKey());
+    }
+
+    /**
+     * This {@link AsyncTask} checks if our movie is favorite or not
+     */
     private class CheckFavoriteTask extends AsyncTask<Integer, Void, Boolean> {
 
         @Override
@@ -323,6 +353,9 @@ public class MovieDetailActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * This {@link AsyncTask} toggles favorite status
+     */
     private class ToggleFavoriteStatusTask extends AsyncTask<Boolean, Void, Boolean> {
         private MovieModel mMovie;
 
