@@ -24,6 +24,11 @@
 
         <activity android:name=".FavoriteMoviesListingActivity" />
 
+        <provider
+            android:name=".data.MovieContentProvider"
+            android:authorities="com.popmovies"
+            android:exported="false" />
+
     </application>
 
 </manifest>
