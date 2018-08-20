@@ -37,8 +37,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + MovieContract.FavoriteEntry.TABLE_NAME);
-        onCreate(db);
+        // I'll add code to update my table whenever I changed my database schema
     }
 
     public List<MovieModel> getFavoriteMoviesFromDb() {
