@@ -1,33 +1,22 @@
 package com.popmovies;
 
 import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.RecyclerView;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
-import com.popmovies.data.MovieDbHelper;
+import com.popmovies.data.MovieContract;
 import com.popmovies.databinding.ActivityFavoriteMoviesListingBinding;
 import com.popmovies.model.MovieModel;
-
-import java.util.List;
+import com.popmovies.utilities.CursorUtils;
 
 
 public class FavoriteMoviesListingActivity extends AppCompatActivity
@@ -35,10 +24,6 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
     private static final int FAVORITE_LOADER_ID = 2355;
 
     private MovieAdapter mMoviesAdapter;
-
-    private MovieDbHelper mDbHelper;
-
-    private BroadcastReceiver mFavStatusChangeReceiver;
 
     private ActivityFavoriteMoviesListingBinding mBinding;
 
@@ -57,12 +42,14 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
-        mDbHelper = new MovieDbHelper(this);
-
         getSupportLoaderManager().initLoader(FAVORITE_LOADER_ID, null, this);
+    }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(mFavStatusChangeReceiver,
-                new IntentFilter(MovieDetailActivity.ACTION_FAVORITE_STATUS_CHANGED));
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        getSupportLoaderManager().restartLoader(FAVORITE_LOADER_ID, null, this);
     }
 
     private void init() {
@@ -76,20 +63,6 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
 
         // hide progress view too
         mBinding.pbLoading.setVisibility(View.GONE);
-
-        mFavStatusChangeReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                getSupportLoaderManager().restartLoader(FAVORITE_LOADER_ID, null, FavoriteMoviesListingActivity.this);
-            }
-        };
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mFavStatusChangeReceiver);
     }
 
     @Override
@@ -126,8 +99,15 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
 
             @Override
             public MovieModel[] loadInBackground() {
-                final List<MovieModel> moviesList = mDbHelper.getFavoriteMoviesFromDb();
-                return moviesList.toArray(new MovieModel[moviesList.size()]);
+                Cursor cursor = getContentResolver().query(MovieContract.FavoriteEntry.CONTENT_URI,
+                        null, null, null, null);
+                if (cursor != null) {
+                    final MovieModel[] movieArray = CursorUtils.getFavoritesMoviesArrayFromCursor(cursor);
+                    cursor.close();
+                    return movieArray;
+                } else {
+                    return null;
+                }
             }
 
             @Override
@@ -147,7 +127,7 @@ public class FavoriteMoviesListingActivity extends AppCompatActivity
 
     @Override
     public void onLoaderReset(Loader<MovieModel[]> loader) {
-
+        mMoviesAdapter.setMovies(null);
     }
 
     @Override
