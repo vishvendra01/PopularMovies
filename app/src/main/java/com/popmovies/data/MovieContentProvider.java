@@ -51,6 +51,19 @@ public class MovieContentProvider extends ContentProvider {
                         sortOrder
                 );
                 break;
+            case FAVORITE_WITH_ID:
+                String id = uri.getPathSegments().get(1);
+                retCursor = db.query(
+                        MovieContract.FavoriteEntry.TABLE_NAME,
+                        projection,
+                        MovieContract.FavoriteEntry._ID + "=?",
+                        new String[]{id},
+                        null,
+                        null,
+                        sortOrder
+                );
+
+                break;
             default:
                 throw new UnsupportedOperationException("Uri not supported : " + uri);
         }
