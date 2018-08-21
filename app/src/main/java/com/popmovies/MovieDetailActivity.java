@@ -2,8 +2,10 @@ package com.popmovies;
 
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -21,11 +23,13 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.view.View;
 import android.widget.Toast;
 
+import com.popmovies.data.MovieContract;
 import com.popmovies.data.MovieDbHelper;
 import com.popmovies.databinding.ActivityMovieDetailBinding;
 import com.popmovies.model.MovieModel;
 import com.popmovies.model.ReviewModel;
 import com.popmovies.model.TrailerModel;
+import com.popmovies.utilities.CursorUtils;
 import com.popmovies.utilities.NetworkUtils;
 import com.popmovies.utilities.TmdbJsonUtils;
 import com.squareup.picasso.Picasso;
@@ -62,8 +66,6 @@ public class MovieDetailActivity extends AppCompatActivity implements MovieTrail
     private MovieReviewsAdapter mReviewsAdapter;
     private MovieTrailersAdapter mTrailersAdapter;
 
-    private MovieDbHelper mDbHelper;
-
     private Boolean mIsFavoriteMovie = null;
 
     private ActivityMovieDetailBinding mBinding;
@@ -73,8 +75,6 @@ public class MovieDetailActivity extends AppCompatActivity implements MovieTrail
         super.onCreate(savedInstanceState);
 
         mBinding = DataBindingUtil.setContentView(this, R.layout.activity_movie_detail);
-
-        mDbHelper = new MovieDbHelper(this);
 
         if (!getIntent().hasExtra(ARG_MOVIE_DATA)) {
             return;
@@ -305,6 +305,47 @@ public class MovieDetailActivity extends AppCompatActivity implements MovieTrail
         }
     }
 
+    private boolean isFavoriteMovie(int movieId) {
+        boolean isFavorite = false;
+
+        Uri movieUri = MovieContract.FavoriteEntry.CONTENT_URI.buildUpon()
+                .appendPath(String.valueOf(movieId)).build();
+
+        Cursor retCursor = getContentResolver().query(movieUri, null, null,
+                null, null);
+
+        if (retCursor != null) {
+            // if cursor have 1 record returned then we can assume that our movie is in database
+            // while assuming that there cannot be multiple movies with same id
+            if (retCursor.getCount() == 1) {
+                isFavorite = true;
+            }
+
+            retCursor.close();
+        }
+
+        return isFavorite;
+    }
+
+    private void markMovieAsFavorite(MovieModel movie) {
+        ContentValues values = new ContentValues();
+        values.put(MovieContract.FavoriteEntry._ID, movie.getId());
+        values.put(MovieContract.FavoriteEntry.COLUMN_TITLE, movie.getMovieTitle());
+        values.put(MovieContract.FavoriteEntry.COLUMN_POSTER_URL, movie.getMoviePosterUrl());
+        values.put(MovieContract.FavoriteEntry.COLUMN_SYNOPSIS, movie.getMovieSynopsis());
+        values.put(MovieContract.FavoriteEntry.COLUMN_RATINGS, movie.getUserRatings());
+        values.put(MovieContract.FavoriteEntry.COLUMN_RELEASE_DATE, movie.getReleaseRate());
+
+        getContentResolver().insert(MovieContract.FavoriteEntry.CONTENT_URI, values);
+    }
+
+    private void removeMovieAsFavorite(int movieId) {
+        Uri movieUri = MovieContract.FavoriteEntry.CONTENT_URI.buildUpon()
+                .appendPath(String.valueOf(movieId)).build();
+
+        getContentResolver().delete(movieUri, null, null);
+    }
+
     @Override
     public boolean onSupportNavigateUp() {
         finish();
@@ -341,7 +382,7 @@ public class MovieDetailActivity extends AppCompatActivity implements MovieTrail
         protected Boolean doInBackground(Integer... params) {
             if (params.length == 1) {
                 Integer movieId = params[0];
-                return mDbHelper.isFavoriteMovie(movieId);
+                return isFavoriteMovie(movieId);
             }
 
             return false;
@@ -372,10 +413,10 @@ public class MovieDetailActivity extends AppCompatActivity implements MovieTrail
                 }
 
                 if (favStatusToSet) {
-                    mDbHelper.addFavoriteMovieToDb(mMovie);
+                    markMovieAsFavorite(mMovie);
                     return true;
                 } else {
-                    mDbHelper.removeFavoriteMovieFromDb(mMovie.getId());
+                    removeMovieAsFavorite(mMovie.getId());
                     return false;
                 }
             }
