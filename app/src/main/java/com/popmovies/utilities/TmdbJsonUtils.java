@@ -1,6 +1,7 @@
 package com.popmovies.utilities;
 
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 import com.popmovies.model.MovieModel;
 import com.popmovies.model.ReviewModel;

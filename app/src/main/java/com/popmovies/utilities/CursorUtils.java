@@ -1,7 +1,8 @@
 package com.popmovies.utilities;
 
 import android.database.Cursor;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 import com.popmovies.data.MovieContract;
 import com.popmovies.model.MovieModel;
