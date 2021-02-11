@@ -3,6 +3,7 @@
     <string name="error_message">Something went wrong. Please try again.</string>
     <string name="retry">Retry</string>
     <string name="filter">Filter</string>
+    <string name="movies_label">Movies</string>
     <string name="fileter_dialog_title">Choose Filter</string>
     <string name="reviews_label">Reviews:</string>
     <string name="trailers_label">Trailers:</string>

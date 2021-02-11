@@ -38,11 +38,11 @@ public class NetworkUtils {
 
     private final static String PARAM_API_KEY = "api_key";
 
-    private final static String MOVIE_ENDPOINT = "movie";
-    private final static String SORT_BY_TOP_RATED = "top_rated";
-    private final static String SORT_BY_POPULAR = "popular";
-    private final static String REVIEW_ENDPOINT = "reviews";
-    private final static String VIDEOS_ENDPOINT = "videos";
+    public final static String MOVIE_ENDPOINT = "movie";
+    public final static String SORT_BY_TOP_RATED = "top_rated";
+    public final static String SORT_BY_POPULAR = "popular";
+    public final static String REVIEW_ENDPOINT = "reviews";
+    public final static String VIDEOS_ENDPOINT = "videos";
 
 
     private final static String apiVersion = "3";

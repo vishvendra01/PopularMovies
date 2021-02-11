@@ -3,6 +3,8 @@ package com.popmovies.model;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Author : Vishvendra
  * Version: 1.0
@@ -11,10 +13,15 @@ import android.os.Parcelable;
 
 public class MovieModel implements Parcelable {
     private int id;
+    @SerializedName("original_title")
     private String movieTitle;
+    @SerializedName("poster_path")
     private String moviePosterUrl;
+    @SerializedName("overview")
     private String movieSynopsis;
+    @SerializedName("vote_average")
     private double userRatings;
+    @SerializedName("release_date")
     private String releaseRate;
 
     public MovieModel(int id, String movieTitle, String moviePosterUrl, String movieSynopsis,
